@@ -1,0 +1,14 @@
+model_type: MeshGNN2D
+hidden_dim: 512
+mpnn_layer_type: GatedGCNConv
+grid2mesh_num_layers: 3
+mesh2mesh_num_layers: 9
+mesh2grid_num_layers: 2
+node_encoder_type: mlp
+edge_encoder_type: mlp
+decoder_type: mlp
+node_encoder_layers: 2
+edge_encoder_layers: 3
+decoder_layers: 3
+activation: silu
+dropout: 0

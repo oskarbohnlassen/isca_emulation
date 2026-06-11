@@ -1,0 +1,33 @@
+model_type: SimpleGNN2D
+gnn_layer_type: GatedGCNResBlock # GCNResBlock, GATResBlock, GatedGCNResBlock
+hidden_dim: 
+  - 256
+  - 300
+  - 350
+  - 400
+  - 450
+  - 500
+num_layers: 
+  - 4
+  - 6
+  - 8
+activation: 
+  - silu
+  - gelu
+  - leaky_relu
+dropout:
+  - 0
+  - 0.1
+node_encoder_type: mlp
+node_encoder_layers: 
+  - 2
+  - 3
+edge_encoder_type: mlp
+edge_encoder_hidden_dim: 32
+edge_encoder_layers: 
+  - 2
+  - 3
+decoder_type: mlp
+decoder_layers: 
+  - 2
+  - 3

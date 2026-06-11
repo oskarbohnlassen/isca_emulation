@@ -1,0 +1,17 @@
+wandb_project_name: isca_final_experiments_with_ssw
+wandb_runs:
+# UnetCNN2D
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/5g1avr9o
+# SimpleCNN2D
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/cs6c3veo
+# Transformer2D_GA
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/z1jpyqg0
+# Transformer2D_swin
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/7bus6oyl
+
+
+test_data_names:
+  - cnn2d_coordinates_trig4_4618_to_4698_postprocessed_with_ssw_test_only
+
+visualize: False
+error_percentile: 0.999

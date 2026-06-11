@@ -1,0 +1,30 @@
+raw:
+  exp_folder_name: Oskar_data_generation_large_run_q6m2y45l800u200_L60
+  file_name: atmos_daily_interp.nc
+
+processing:
+  name: mesh_gnn
+  dataset_type: SimpleDatasetMeshGNN
+  params:
+    vars:
+      - temp
+      - ucomp
+      - vcomp
+    level_dim: pfull
+    lat_dim: lat
+    lon_dim: lon
+    time_dim: time
+    time_chunk: 81
+    time_start: 4618
+    max_timesteps: 81
+    shard_pairs: 10000
+    mesh_splits: 4
+    radius_query_factor: 0.8
+    candidate_face_k: 16
+    edge_feature_mode: receiver_local # global_xyz, receiver_local
+
+split: [0, 0, 1.0] # test-only
+stats_path: data/processed/mesh_gnn_1000_to_3500_splits_4_radius_0_8_candidate_k_16_receiver_local_postprocessed_with_ssw/stats.pt
+
+output:
+  dataset_name: mesh_gnn_4618_to_4698_splits_4_radius_0_8_candidate_k_16_receiver_local_postprocessed_with_ssw_test_only

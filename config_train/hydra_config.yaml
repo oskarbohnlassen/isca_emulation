@@ -1,0 +1,6 @@
+defaults:
+  - model: cnn3d_unet
+  - train: default
+  - wandb: default
+
+path_to_processed_data: cnn3d_coordinates_trig4_1000_to_2500_postprocessed_with_ssw

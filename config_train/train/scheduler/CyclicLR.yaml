@@ -1,0 +1,5 @@
+name: CyclicLR
+lower_bound_lr: 0.1    # base_lr = lr * 0.1 = xx
+step_size_up_epochs: 5  # number of epochs to increase the learning rate
+step_size_down_epochs: 5  # number of epochs to decrease the learning rate
+mode: "triangular"    # {"triangular", "triangular2", "exp_range"}

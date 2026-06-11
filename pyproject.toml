@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isca_emulation_v2"
+version = "0.0.1"
+description = "Machine learning emulators for Isca climate model simulations."
+authors = [
+  { name = "Oskar Bohn Lassen", email = "obola@dtu.com" }]
+license = { text = "MIT" }
+
+keywords = ["climate", "emulation", "isca", "machine learning"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["tests/*", "*/_remote_module_non_scriptable.py"]
+
+[project.scripts]
+preprocess_data = "isca_emulation_v2.process_data:app"
+train = "isca_emulation_v2.train_model:app"
+evaluate = "isca_emulation_v2.evaluate:app"

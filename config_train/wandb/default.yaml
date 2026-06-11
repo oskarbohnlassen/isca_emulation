@@ -1,0 +1,6 @@
+project_name: isca_final_experiments_with_ssw
+save_data: False
+append_model_type_to_name: True
+save_model_threshold: 800
+sweep:
+  enabled: False

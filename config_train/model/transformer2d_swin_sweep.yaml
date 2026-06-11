@@ -1,0 +1,35 @@
+model_type: Transformer2DSwinForecaster
+hidden_dim: 
+  - 768
+  - 896
+  - 1024
+  - 1152
+  - 1280
+  - 1536
+  - 1792
+  - 2048
+patch_height: 
+  - 2
+  - 4
+patch_width: 
+  - 2
+  - 4
+window_height: 
+  - 2
+  - 4
+window_width: 
+  - 2
+  - 4
+num_layers: 
+  - 8
+  - 10
+  - 12
+num_heads: 
+  - 4
+  - 8
+mlp_ratio: 
+  - 6.0
+  - 8.0
+activation: gelu
+dropout: 0.0
+attention_dropout: 0.0

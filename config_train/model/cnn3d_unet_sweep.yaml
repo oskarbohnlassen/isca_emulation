@@ -1,0 +1,22 @@
+model_type: UnetCNN3D_Fixed
+hidden_dim_base: 
+  - 16
+  - 32
+  - 40
+  - 50
+down_sample_method: 
+  - pool_mean 
+  - pool_max 
+  - strided_conv # pool_max, pool_mean, strided_conv
+bottleneck_dilation: 
+  - 1
+  - 2
+  - 3
+activation: 
+  - silu
+  - gelu
+  - leaky_relu
+padding_type: lonlat
+use_batch_norm: 
+  - True
+  - False

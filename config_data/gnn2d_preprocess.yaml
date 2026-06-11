@@ -1,0 +1,29 @@
+raw:
+  exp_folder_name: Oskar_data_generation_large_run_no_ssw_L60
+  file_name: atmos_daily_interp.nc
+
+processing:
+  name: gnn2d
+  dataset_type: SimpleDatasetGNN2D
+  params:
+    vars:
+      - temp
+      - ucomp
+      - vcomp
+    level_dim: pfull
+    lat_dim: lat
+    lon_dim: lon
+    time_dim: time
+    time_chunk: 500
+    time_start: 1000
+    max_timesteps: 2500
+    neighbour_connectivity: 8
+    add_coords_node: trig4 
+    add_distances_edge: True 
+    edge_feature_mode: receiver_local # legacy_dxdy, receiver_local
+    shard_pairs: 10000 
+
+split: [0.8, 0.1, 0.1] 
+
+output:
+  dataset_name: gnn2d_coordinates_trig4_receiver_local_1000_to_3500_receiver_local_postprocessed_no_ssw

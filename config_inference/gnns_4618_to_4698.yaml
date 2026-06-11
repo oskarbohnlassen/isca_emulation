@@ -1,0 +1,13 @@
+wandb_project_name: isca_final_experiments_with_ssw
+wandb_runs:
+# GNN2d
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/v4zpo4za
+# MeshGNN
+- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/36xgrial
+
+test_data_names:
+  - gnn2d_coordinates_trig4_receiver_local_4618_to_4698_receiver_local_postprocessed_with_ssw_test_only
+  - mesh_gnn_4618_to_4698_splits_4_radius_0_8_candidate_k_16_receiver_local_postprocessed_with_ssw_test_only
+
+visualize: False
+error_percentile: 0.999

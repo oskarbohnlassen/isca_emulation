@@ -1,0 +1,5 @@
+name: ReduceLROnPlateau
+mode: "min"       # Reduce LR when the validation loss stops decreasing
+factor: 0.5       # Reduce LR by this factor
+patience: 3       # Number of epochs to wait before reducing LR
+verbose: True

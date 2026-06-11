@@ -1,0 +1,26 @@
+scheduler: OneCycleLR
+optimizer: AdamW
+loss_fn: 
+  - SmoothL1Loss
+  - L1Loss
+lr: 
+  - 0.0003
+  - 0.0005
+  - 0.001
+weight_decay: 
+  - 0.0001
+  - 0.0005
+batch_size: 5
+epochs: 10
+cache_in_memory: False
+num_workers: 0
+pin_memory: False
+persistent_workers: False
+prefetch_factor: 2
+
+# Basic settings
+device: cuda
+random_seed: 42
+early_stopping: False
+early_stopping_patience: 10
+metrics_every_n_epochs: 1

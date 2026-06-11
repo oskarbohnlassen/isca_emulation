@@ -1,0 +1,11 @@
+project_name: isca_final_experiments_no_ssw
+save_data: False
+append_model_type_to_name: True
+save_model_threshold: 0.00001
+sweep:
+  enabled: True
+  sweep_name: transformer2d_swin_sweep_1000_3500_no_ssw
+  metric_name: validation/MAE_mean
+  metric_goal: minimize
+  method: bayes
+  run_cap: 50

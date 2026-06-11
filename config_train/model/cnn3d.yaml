@@ -1,0 +1,7 @@
+model_type: SimpleCNN3D
+hidden_dim: 64
+kernel_size: 7
+padding_type: lonlat
+activation: gelu
+use_batch_norm: False
+num_layers: 4

@@ -1,0 +1,7 @@
+name: RatioConservationLoss
+lambda_flow: 0.0001
+lambda_conservation: 0.00000001
+lambda_ratio: 1
+warmup_epochs: 5
+tau: 1.0
+num_nodes_per_graph: 24

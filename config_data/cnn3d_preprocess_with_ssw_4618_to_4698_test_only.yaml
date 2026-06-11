@@ -1,0 +1,27 @@
+raw:
+  exp_folder_name: Oskar_data_generation_large_run_q6m2y45l800u200_L60
+  file_name: atmos_daily_interp.nc
+
+processing:
+  name: cnn3d
+  dataset_type: SimpleDatasetCNN3D
+  params:
+    vars:
+      - temp
+      - ucomp
+      - vcomp
+    level_dim: pfull
+    lat_dim: lat
+    lon_dim: lon
+    time_dim: time
+    time_chunk: 81
+    time_start: 4618
+    max_timesteps: 81
+    shard_pairs: 10000
+    add_coords: trig4 # trig4, trig2, null
+
+split: [0, 0, 1.0] # test-only
+stats_path: data/processed/cnn3d_coordinates_trig4_1000_to_3500_postprocessed_with_ssw/stats.pt
+
+output:
+  dataset_name: cnn3d_coordinates_trig4_4618_to_4698_postprocessed_with_ssw_test_only

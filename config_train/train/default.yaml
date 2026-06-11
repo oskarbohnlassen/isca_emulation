@@ -1,0 +1,23 @@
+scheduler: ExponentialLR
+optimizer: Adam
+loss_fn: SmoothL1Loss
+
+# Optimizer settings
+lr: 0.0005
+weight_decay: 0.0001
+batch_size: 5
+cache_in_memory: False
+num_workers: 0
+pin_memory: False
+persistent_workers: False
+prefetch_factor: 2
+epochs: 50
+
+# Basic settings
+device: cuda
+random_seed: 42
+early_stopping: False
+early_stopping_patience: 10
+
+# Compute expensive validation metrics every N epochs (always computed on final epoch).
+metrics_every_n_epochs: 1

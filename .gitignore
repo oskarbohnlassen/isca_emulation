@@ -1,0 +1,62 @@
+# Local data, outputs, and experiment state
+artifacts/*
+!artifacts/.gitkeep
+!artifacts/README.md
+
+data/*
+!data/.gitkeep
+!data/README.md
+!data/raw/
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.md
+!data/processed/
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/README.md
+
+models/*
+!models/.gitkeep
+!models/README.md
+
+results/*
+!results/.gitkeep
+!results/README.md
+
+wandb/*
+!wandb/.gitkeep
+!wandb/README.md
+
+*/baseline_models/
+
+# Notebook-generated assets
+notebooks/plots_for_paper/*
+!notebooks/plots_for_paper/.gitkeep
+!notebooks/plots_for_paper/README.md
+notebooks/data_for_paper/*
+!notebooks/data_for_paper/.gitkeep
+!notebooks/data_for_paper/README.md
+.ipynb_checkpoints/
+
+# Python build, cache, and test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local environments and machine-specific configuration
+venv/
+.venv/
+.env
+.env.*
+!.env.example
+.codex
+
+# Scratch space
+dev/

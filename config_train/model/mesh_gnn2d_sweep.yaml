@@ -1,0 +1,40 @@
+model_type: MeshGNN2D
+hidden_dim: 
+  - 256
+  - 512
+  - 640
+  - 768
+mpnn_layer_type:
+  - GatedGCNConv
+grid2mesh_num_layers:
+  - 2
+  - 3
+mesh2mesh_num_layers: 
+  - 5
+  - 7
+  - 8
+  - 9
+  - 10
+mesh2grid_num_layers:
+  - 2
+  - 3
+node_encoder_layers: 
+  - 2
+  - 3
+edge_encoder_layers:
+  - 2
+  - 3
+decoder_layers: 
+  - 2
+  - 3
+node_encoder_type: mlp
+edge_encoder_type: mlp
+decoder_type: mlp
+activation: 
+  - gelu
+  - relu
+  - silu
+  - leaky_relu
+dropout: 
+  - 0.0
+  - 0.1

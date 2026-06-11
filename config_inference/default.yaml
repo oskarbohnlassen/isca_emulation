@@ -1,0 +1,13 @@
+wandb_project_name: isca_final_experiments_with_ssw
+wandb_runs:
+  - obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/7bus6oyl
+  #- obola-the-technical-university-of-denmark/isca_final_experiments_with_ssw/36xgrial
+ # - obola-the-technical-university-of-denmark/isca_final_experiments_no_ssw/v41v06bh
+#  - obola-the-technical-university-of-denmark/isca_final_experiments_no_ssw/vhjuk7qw
+test_data_names: 
+  - cnn2d_coordinates_trig4_1000_to_3500_postprocessed_with_ssw
+  #- 
+  #- cnn2d_coordinates_trig4_1000_to_3500_postprocessed_with_ssw
+  #- mesh_gnn_1000_to_3500_splits_4_radius_0_8_candidate_k_16_receiver_local_postprocessed_no_ssw
+visualize: True
+error_percentile: 0.999

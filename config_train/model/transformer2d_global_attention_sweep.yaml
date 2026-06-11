@@ -1,0 +1,31 @@
+model_type: Transformer2DGlobalAttentionForecaster
+hidden_dim:
+  - 512
+  - 1024
+  - 1280
+  - 1536
+  - 2048
+patch_height:
+  - 4
+  - 8
+patch_width:
+  - 2
+  - 4
+  - 8
+num_layers:
+  - 4
+  - 6
+  - 8
+  - 10
+  - 12
+num_heads:
+  - 4
+  - 8
+mlp_ratio:
+  - 3.0
+  - 4.0
+  - 6.0
+  - 8.0
+activation: gelu
+dropout: 0.0
+attention_dropout: 0.0

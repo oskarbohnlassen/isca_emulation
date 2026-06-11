@@ -1,0 +1,14 @@
+model_type: Transformer3DSwinForecaster
+hidden_dim: 768
+patch_depth: 4
+patch_height: 4
+patch_width: 4
+window_depth: 3
+window_height: 4
+window_width: 2
+num_layers: 8
+num_heads: 8
+mlp_ratio: 6.0
+activation: gelu
+dropout: 0
+attention_dropout: 0

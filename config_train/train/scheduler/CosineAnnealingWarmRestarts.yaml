@@ -1,0 +1,4 @@
+name: CosineAnnealingWarmRestarts
+T_0: 10               # epochs in first cycle
+T_mult: 2             # cycle length multiplier after each restart
+eta_min: 0.0          # minimum LR at end of each cycle
