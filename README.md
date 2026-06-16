@@ -1,4 +1,4 @@
-# ISCA Emulation V2
+# Isca Emulation Repository
 
 Research code for training and evaluating machine learning emulators of Isca climate model simulations. The repository contains preprocessing pipelines, model definitions, training and evaluation entry points, experiment configuration files, and analysis notebooks used around the paper workflow.
 
