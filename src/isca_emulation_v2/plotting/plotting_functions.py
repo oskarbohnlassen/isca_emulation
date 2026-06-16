@@ -2,8 +2,20 @@ import os
 import textwrap
 from typing import Sequence, TypedDict
 import logging
+from collections import OrderedDict
+from pathlib import Path
 import numpy as np
 import torch
+
+
+DEFAULT_ISCA_PLOT_PORT = 5006
+_ISCA_PANEL_SERVER = None
+
+
+def _normalize_pressure_levels(pressure_levels_hpa: Sequence[float] | float) -> tuple[float, ...]:
+    if np.isscalar(pressure_levels_hpa):
+        return (float(pressure_levels_hpa),)
+    return tuple(float(p) for p in pressure_levels_hpa)
 
 
 def error_min_max_from_percentile(error_values: np.ndarray, error_percentile: float) -> tuple[float, float]:
@@ -39,7 +51,9 @@ def error_min_max_from_percentile(error_values: np.ndarray, error_percentile: fl
     return -abs_lim, abs_lim
 
 
-def _serve_panel_app(app) -> None:
+def _serve_panel_app(app, *, port: int | None = None) -> None:
+    global _ISCA_PANEL_SERVER
+
     import panel as pn
 
     # Bokeh may emit noisy patch-drop warnings during rapid model replacement.
@@ -54,7 +68,7 @@ def _serve_panel_app(app) -> None:
         root_logger._isca_drop_patch_filter_installed = True
 
     port_env = os.environ.get("ISCA_PLOT_PORT")
-    port = int(port_env) if port_env else 0
+    resolved_port = int(port) if port is not None else int(port_env) if port_env else DEFAULT_ISCA_PLOT_PORT
 
     ws_env = os.environ.get("BOKEH_ALLOW_WS_ORIGIN")
     if ws_env:
@@ -62,9 +76,12 @@ def _serve_panel_app(app) -> None:
     else:
         websocket_origin = "*"
 
-    pn.serve(
+    if _ISCA_PANEL_SERVER is not None:
+        _ISCA_PANEL_SERVER.stop()
+
+    _ISCA_PANEL_SERVER = pn.serve(
         app,
-        port=port,
+        port=resolved_port,
         address="127.0.0.1",
         websocket_origin=websocket_origin,
         show=False,
@@ -181,6 +198,532 @@ def plot_isca_result(
     sync()
     app = pn.Column(pn.Row(var_w, time_w, p_w), zonal_mean_text, dmap)
     _serve_panel_app(app)
+
+
+def compute_isca_absolute_vorticity_slice(ds, time_index: int, pressure_hpa: float):
+    """Compute absolute vorticity for one ISCA time and pressure slice."""
+    import metpy.calc as mpcalc
+    from metpy.units import units
+    import xarray as xr
+
+    field = ds.sel(pfull=pressure_hpa, method="nearest").isel(time=int(time_index))
+
+    u = field["ucomp"].load().to_numpy() * units("m/s")
+    v = field["vcomp"].load().to_numpy() * units("m/s")
+    lons = field["lon"].to_numpy() * units.degrees
+    lats = field["lat"].to_numpy() * units.degrees
+
+    dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
+    avort = mpcalc.absolute_vorticity(
+        u,
+        v,
+        dx=dx,
+        dy=dy,
+        latitude=lats[:, None],
+    ).to("1/s")
+
+    return xr.DataArray(
+        avort.magnitude,
+        dims=("lat", "lon"),
+        coords={"lat": field["lat"], "lon": field["lon"]},
+        name="absolute_vorticity",
+        attrs={
+            "units": "s^-1",
+            "pressure_hpa": float(field["pfull"].item()),
+            "requested_pressure_hpa": float(pressure_hpa),
+            "time_index": int(time_index),
+            "time": float(field["time"].item()),
+        },
+    )
+
+
+def _load_isca_zonal_mean_wind_series(
+    ds,
+    *,
+    target_lat: float,
+    target_pressure_hpa: float,
+) -> tuple[np.ndarray, float, float]:
+    import netCDF4 as nc
+
+    lat_values = ds["lat"].to_numpy()
+    pfull_values = ds["pfull"].to_numpy().astype(float)
+    lat_idx = int(np.argmin(np.abs(lat_values - float(target_lat))))
+    p_idx = int(np.argmin(np.abs(pfull_values - float(target_pressure_hpa))))
+    lat_used = float(lat_values[lat_idx])
+    p_used = float(pfull_values[p_idx])
+
+    source = ds["ucomp"].encoding.get("source")
+    if source is not None:
+        source_path = Path(source)
+        run_root = source_path.parent.parent
+        files = sorted(run_root.glob(f"run*/{source_path.name}"))
+        if files:
+            series_parts = []
+            for file_path in files:
+                with nc.Dataset(file_path) as dataset:
+                    u_slice = dataset.variables["ucomp"][:, p_idx, lat_idx, :]
+                    series_parts.append(np.asarray(u_slice).mean(axis=1))
+            values = np.concatenate(series_parts).astype(np.float64)
+            if values.size == int(ds.sizes["time"]):
+                return values, lat_used, p_used
+
+    u_series = (
+        ds["ucomp"]
+        .isel(pfull=p_idx, lat=lat_idx)
+        .mean("lon")
+        .load()
+        .to_numpy()
+        .astype(np.float64)
+    )
+    return u_series, lat_used, p_used
+
+
+def plot_isca_absolute_vorticity(
+    ds0,
+    *,
+    time_index: int = 0,
+    pressure_levels_hpa: Sequence[float] | float = (10.0, 80.0),
+    min_lat: float = 35.0,
+    plot_scale: float = 1e6,
+    levels: np.ndarray | None = None,
+    contour_levels: np.ndarray | None = None,
+    cmap="PuOr_r",
+    figsize: tuple[float, float] | None = None,
+    dpi: int = 150,
+    cache_size: int = 12,
+    wind_series_lat: float = 60.0,
+    wind_series_pressure_hpa: float = 10.0,
+    port: int | None = None,
+) -> None:
+    import metpy.calc as mpcalc
+    import matplotlib.path as mpath
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    import panel as pn
+    from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+    from metpy.units import units
+    from cartopy import crs as ccrs
+    from cartopy.util import add_cyclic_point
+
+    pn.extension()
+
+    times = ds0["time"].to_numpy()
+    n_times = int(ds0.sizes["time"])
+    pressure_levels_hpa = _normalize_pressure_levels(pressure_levels_hpa)
+    if figsize is None:
+        figsize = (4.5 * len(pressure_levels_hpa) + 5.0, 4.8)
+    levels = np.arange(0.0, 200.1, 5.0) if levels is None else levels
+    contour_levels = np.arange(0.0, 200.1, 20.0) if contour_levels is None else contour_levels
+
+    lons_np = ds0["lon"].to_numpy()
+    lats_np = ds0["lat"].to_numpy()
+    pfull_np = ds0["pfull"].to_numpy().astype(float)
+    pressure_indices = tuple(int(np.argmin(np.abs(pfull_np - p))) for p in pressure_levels_hpa)
+    pressure_used = tuple(float(pfull_np[idx]) for idx in pressure_indices)
+    lat_mask = lats_np >= float(min_lat)
+    lats_plot = lats_np[lat_mask]
+
+    lons_q = lons_np * units.degrees
+    lats_q = lats_np * units.degrees
+    dx, dy = mpcalc.lat_lon_grid_deltas(lons_q, lats_q)
+    latitude_q = lats_q[:, None]
+    plot_cache: OrderedDict[int, list[tuple[float, np.ndarray, np.ndarray]]] = OrderedDict()
+    lon_gridlines = np.arange(-180, 181, 60)
+    first_lat_gridline = np.ceil(float(min_lat) / 10.0) * 10.0
+    lat_gridlines = np.arange(first_lat_gridline, 90.0, 10.0)
+    if lat_gridlines.size == 0:
+        lat_gridlines = np.array([60.0, 70.0, 80.0])
+    circle_path = mpath.Path(
+        np.column_stack(
+            [
+                0.5 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, 120)),
+                0.5 + 0.5 * np.cos(np.linspace(0, 2 * np.pi, 120)),
+            ]
+        )
+    )
+
+    u60_values, u60_lat_used, u60_p_used = _load_isca_zonal_mean_wind_series(
+        ds0,
+        target_lat=wind_series_lat,
+        target_pressure_hpa=wind_series_pressure_hpa,
+    )
+    time_indices = np.arange(n_times)
+    u60_min = float(np.nanmin(u60_values))
+    u60_max = float(np.nanmax(u60_values))
+    u60_pad = 0.05 * (u60_max - u60_min)
+    if not np.isfinite(u60_pad) or u60_pad == 0.0:
+        u60_pad = 1.0
+    u60_ylim = (u60_min - u60_pad, u60_max + u60_pad)
+
+    def compute_plot_fields(time_idx: int) -> list[tuple[float, np.ndarray, np.ndarray]]:
+        time_idx = int(time_idx)
+        if time_idx in plot_cache:
+            plot_cache.move_to_end(time_idx)
+            return plot_cache[time_idx]
+
+        subset = (
+            ds0[["ucomp", "vcomp"]]
+            .isel(time=time_idx, pfull=list(pressure_indices))
+            .load()
+        )
+        u_stack = subset["ucomp"].to_numpy()
+        v_stack = subset["vcomp"].to_numpy()
+
+        plot_fields = []
+        for level_pos, p_used in enumerate(pressure_used):
+            avort = mpcalc.absolute_vorticity(
+                u_stack[level_pos] * units("m/s"),
+                v_stack[level_pos] * units("m/s"),
+                dx=dx,
+                dy=dy,
+                latitude=latitude_q,
+            ).to("1/s")
+            avort_plot, lon_plot = add_cyclic_point(
+                avort.magnitude[lat_mask, :] * plot_scale,
+                coord=lons_np,
+            )
+            plot_fields.append((p_used, avort_plot, lon_plot))
+
+        plot_cache[time_idx] = plot_fields
+        if len(plot_cache) > int(cache_size):
+            plot_cache.popitem(last=False)
+        return plot_fields
+
+    def make_figure(time_idx: int):
+        time_idx = int(time_idx)
+        plot_fields = compute_plot_fields(time_idx)
+        n_map_axes = len(plot_fields)
+
+        fig = plt.figure(figsize=figsize, dpi=dpi)
+        grid = fig.add_gridspec(
+            1,
+            n_map_axes + 1,
+            width_ratios=[1.0] * n_map_axes + [1.25],
+            wspace=0.18,
+        )
+        axes = np.array(
+            [
+                fig.add_subplot(grid[0, panel_idx], projection=ccrs.NorthPolarStereo())
+                for panel_idx in range(n_map_axes)
+            ],
+            dtype=object,
+        )
+        wind_ax = fig.add_subplot(grid[0, n_map_axes])
+        contour = None
+
+        for ax, (p_used, avort_plot, lon_plot) in zip(axes, plot_fields):
+            contour = ax.contourf(
+                lon_plot,
+                lats_plot,
+                avort_plot,
+                levels=levels,
+                cmap=cmap,
+                extend="both",
+                transform=ccrs.PlateCarree(),
+            )
+            ax.contour(
+                lon_plot,
+                lats_plot,
+                avort_plot,
+                levels=contour_levels,
+                colors="black",
+                linewidths=0.35,
+                alpha=0.35,
+                transform=ccrs.PlateCarree(),
+            )
+            ax.set_extent([-180, 180, min_lat, 90.0], ccrs.PlateCarree())
+            ax.set_boundary(circle_path, transform=ax.transAxes)
+            gridlines = ax.gridlines(
+                crs=ccrs.PlateCarree(),
+                draw_labels=True,
+                xlocs=lon_gridlines,
+                ylocs=lat_gridlines,
+                linewidth=0.45,
+                color="0.25",
+                alpha=0.5,
+                linestyle="--",
+            )
+            gridlines.xformatter = LongitudeFormatter()
+            gridlines.yformatter = LatitudeFormatter()
+            gridlines.top_labels = False
+            gridlines.right_labels = False
+            gridlines.xlabel_style = {"size": 7, "color": "0.2"}
+            gridlines.ylabel_style = {"size": 7, "color": "0.2"}
+            ax.set_title(f"{p_used:.1f} hPa")
+
+        selected_u60 = float(u60_values[time_idx])
+        wind_ax.plot(time_indices, u60_values, color="darkblue", lw=0.9)
+        wind_ax.axhline(0.0, color="0.35", lw=0.8, alpha=0.8)
+        wind_ax.axvline(time_idx, color="red", lw=1.0, alpha=0.9)
+        wind_ax.set_xlim(0, n_times - 1)
+        wind_ax.set_ylim(*u60_ylim)
+        wind_ax.set_xlabel("time index")
+        wind_ax.set_ylabel(r"m s$^{-1}$")
+        wind_ax.set_title(f"U60N {u60_p_used:.1f} hPa: {selected_u60:.1f}")
+        wind_ax.grid(True, alpha=0.2)
+        wind_ax.spines["top"].set_visible(False)
+        wind_ax.spines["right"].set_visible(False)
+
+        fig.suptitle(f"Absolute vorticity at time index {time_idx}")
+        cbar = fig.colorbar(
+            contour,
+            ax=axes.tolist(),
+            orientation="horizontal",
+            fraction=0.06,
+            pad=0.07,
+            label=r"Absolute vorticity ($10^{-6}$ s$^{-1}$)",
+        )
+        cbar.ax.xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
+        return fig
+
+    def time_text(time_idx: int) -> str:
+        time_idx = int(time_idx)
+        return (
+            f"Dataset time: **{float(times[time_idx]):.1f}** | "
+            f"U at lat≈{u60_lat_used:.1f}, pfull≈{u60_p_used:.1f}: "
+            f"**{float(u60_values[time_idx]):.3f} m/s**"
+        )
+
+    initial_time_index = int(time_index)
+    time_w = pn.widgets.IntSlider(
+        name="time index",
+        start=0,
+        end=n_times - 1,
+        value=initial_time_index,
+        step=1,
+    )
+    time_input = pn.widgets.IntInput(
+        name="time index value",
+        start=0,
+        end=n_times - 1,
+        value=initial_time_index,
+    )
+    time_info = pn.pane.Markdown(time_text(initial_time_index), sizing_mode="stretch_width")
+    initial_fig = make_figure(initial_time_index)
+    fig_pane = pn.pane.Matplotlib(
+        initial_fig,
+        dpi=dpi,
+        tight=True,
+        sizing_mode="stretch_width",
+    )
+    plt.close(initial_fig)
+    syncing_time_widgets = False
+
+    def sync_from_slider(_=None) -> None:
+        nonlocal syncing_time_widgets
+        if syncing_time_widgets:
+            return
+        syncing_time_widgets = True
+        time_input.value = int(time_w.value)
+        syncing_time_widgets = False
+        update_figure(int(time_w.value))
+
+    def sync_from_input(_=None) -> None:
+        nonlocal syncing_time_widgets
+        if syncing_time_widgets:
+            return
+        syncing_time_widgets = True
+        time_w.value = int(time_input.value)
+        syncing_time_widgets = False
+        update_figure(int(time_input.value))
+
+    def update_figure(time_idx: int) -> None:
+        old_fig = fig_pane.object
+        new_fig = make_figure(time_idx)
+        fig_pane.object = new_fig
+        time_info.object = time_text(time_idx)
+        plt.close(new_fig)
+        if old_fig is not None:
+            plt.close(old_fig)
+
+    time_w.param.watch(sync_from_slider, "value_throttled")
+    time_input.param.watch(sync_from_input, "value")
+
+    app = pn.Column(
+        pn.Row(time_w, time_input, sizing_mode="stretch_width"),
+        time_info,
+        fig_pane,
+        sizing_mode="stretch_width",
+    )
+    _serve_panel_app(app, port=port)
+
+
+def plot_isca_absolute_vorticity_for_paper(
+    ds_no_ssw,
+    ds_with_ssw,
+    *,
+    time_index_no_ssw: int = 3500,
+    time_indices_with_ssw: Sequence[int] = (1120, 4685),
+    pressure_levels_hpa: Sequence[float] | float = (10.0, 80.0),
+    min_lat: float = 35.0,
+    plot_scale: float = 1e6,
+    levels: np.ndarray | None = None,
+    contour_levels: np.ndarray | None = None,
+    cmap="PuOr_r",
+    figsize: tuple[float, float] | None = None,
+    dpi: int = 150,
+):
+    """Plot no-SSW and with-SSW absolute vorticity as a static figure."""
+    import matplotlib.path as mpath
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    import metpy.calc as mpcalc
+    from cartopy import crs as ccrs
+    from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+    from cartopy.util import add_cyclic_point
+    from metpy.units import units
+
+    pressure_levels_hpa = _normalize_pressure_levels(pressure_levels_hpa)
+    time_indices_with_ssw = tuple(int(i) for i in time_indices_with_ssw)
+    levels = np.arange(0.0, 200.1, 5.0) if levels is None else levels
+    contour_levels = np.arange(0.0, 200.1, 20.0) if contour_levels is None else contour_levels
+
+    cases = [("No SSW", ds_no_ssw, int(time_index_no_ssw))]
+    cases.extend(("With SSW", ds_with_ssw, time_idx) for time_idx in time_indices_with_ssw)
+
+    n_rows = len(pressure_levels_hpa)
+    n_cols = len(cases)
+    if figsize is None:
+        figsize = (4.7 * n_cols, 3.3 * n_rows + 0.7)
+
+    lon_gridlines = np.arange(-180, 181, 60)
+    first_lat_gridline = np.ceil(float(min_lat) / 10.0) * 10.0
+    lat_gridlines = np.arange(first_lat_gridline, 90.0, 10.0)
+    circle_path = mpath.Path(
+        np.column_stack(
+            [
+                0.5 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, 120)),
+                0.5 + 0.5 * np.cos(np.linspace(0, 2 * np.pi, 120)),
+            ]
+        )
+    )
+
+    def calculate_case(ds, time_idx: int):
+        lon = ds["lon"].to_numpy()
+        lat = ds["lat"].to_numpy()
+        pfull = ds["pfull"].to_numpy().astype(float)
+        pressure_indices = [int(np.argmin(np.abs(pfull - p))) for p in pressure_levels_hpa]
+        lat_mask = lat >= float(min_lat)
+
+        wind = ds[["ucomp", "vcomp"]].isel(
+            time=time_idx,
+            pfull=pressure_indices,
+        ).load()
+        u = wind["ucomp"].to_numpy()
+        v = wind["vcomp"].to_numpy()
+
+        dx, dy = mpcalc.lat_lon_grid_deltas(
+            lon * units.degrees,
+            lat * units.degrees,
+        )
+
+        fields = []
+        for pressure_pos, pressure_idx in enumerate(pressure_indices):
+            absolute_vorticity = mpcalc.absolute_vorticity(
+                u[pressure_pos] * units("m/s"),
+                v[pressure_pos] * units("m/s"),
+                dx=dx,
+                dy=dy,
+                latitude=lat[:, None] * units.degrees,
+            ).to("1/s")
+
+            values, cyclic_lon = add_cyclic_point(
+                absolute_vorticity.magnitude[lat_mask, :] * plot_scale,
+                coord=lon,
+            )
+            fields.append(
+                (
+                    float(pfull[pressure_idx]),
+                    values,
+                    cyclic_lon,
+                    lat[lat_mask],
+                )
+            )
+
+        return fields
+
+    case_fields = [calculate_case(ds, time_idx) for _label, ds, time_idx in cases]
+
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=figsize,
+        dpi=dpi,
+        subplot_kw={"projection": ccrs.NorthPolarStereo()},
+        squeeze=False,
+    )
+
+    contour = None
+    for col_idx, ((case_label, _ds, time_idx), fields) in enumerate(zip(cases, case_fields)):
+        for row_idx, (pressure_used, values, lon, lat) in enumerate(fields):
+            ax = axes[row_idx, col_idx]
+            contour = ax.contourf(
+                lon,
+                lat,
+                values,
+                levels=levels,
+                cmap=cmap,
+                extend="both",
+                transform=ccrs.PlateCarree(),
+            )
+            ax.contour(
+                lon,
+                lat,
+                values,
+                levels=contour_levels,
+                colors="black",
+                linewidths=0.35,
+                alpha=0.35,
+                transform=ccrs.PlateCarree(),
+            )
+            ax.set_extent([-180, 180, min_lat, 90.0], ccrs.PlateCarree())
+            ax.set_boundary(circle_path, transform=ax.transAxes)
+
+            gridlines = ax.gridlines(
+                crs=ccrs.PlateCarree(),
+                draw_labels=True,
+                xlocs=lon_gridlines,
+                ylocs=lat_gridlines,
+                linewidth=0.45,
+                color="0.25",
+                alpha=0.5,
+                linestyle="--",
+            )
+            gridlines.xformatter = LongitudeFormatter()
+            gridlines.yformatter = LatitudeFormatter()
+            gridlines.top_labels = False
+            gridlines.right_labels = False
+            gridlines.xlabel_style = {"size": 7, "color": "0.2"}
+            gridlines.ylabel_style = {"size": 7, "color": "0.2"}
+
+            #if row_idx == 0:
+                #ax.set_title(f"{chr(ord('a') + col_idx)})", fontsize=10)
+            if col_idx == 0:
+                ax.text(
+                    -0.12,
+                    0.5,
+                    f"{pressure_used:g} hPa",
+                    rotation=90,
+                    va="center",
+                    ha="center",
+                    transform=ax.transAxes,
+                    fontsize=10,
+                )
+
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.90, bottom=0.12, wspace=0.12, hspace=0.18)
+    #fig.suptitle("Absolute vorticity", fontsize=12)
+    colorbar = fig.colorbar(
+        contour,
+        ax=axes.ravel().tolist(),
+        orientation="horizontal",
+        fraction=0.035,
+        pad=0.08,
+        aspect=45,
+        label=r"Absolute vorticity ($10^{-6}$ s$^{-1}$)",
+    )
+    colorbar.ax.xaxis.set_major_formatter(mticker.FormatStrFormatter("%d"))
+    plt.show()
+    return fig, axes
 
 
 
