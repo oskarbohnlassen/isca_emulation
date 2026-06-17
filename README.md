@@ -68,7 +68,3 @@ After installing the development dependencies:
 ```bash
 pytest -q
 ```
-
-## Public Release Notes
-
-Before making the repository public, confirm the license, clear or redact notebook outputs containing local paths, and decide whether public inference configs should point at published W&B artifacts, anonymous examples, or DOI-backed model checkpoints.
