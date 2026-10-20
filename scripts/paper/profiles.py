@@ -45,7 +45,7 @@ def generate(context):
                     ax.set_yscale("log")
                     ax.grid(alpha=0.3)
                     ax.set_xlim(left=0)
-                    ax.set_title(f"{'No SSW' if row == 0 else 'With SSW'}: "
+                    ax.set_title(f"{'no-SSW' if row == 0 else 'SSW-enabled'}: "
                                  f"{'Temperature' if variable == 'temp' else 'Zonal wind'}")
                     assert len(ax.lines) == 11 and len(ax.collections) == 10
                 axes[row, 0].set_ylabel("Pressure (hPa)")
