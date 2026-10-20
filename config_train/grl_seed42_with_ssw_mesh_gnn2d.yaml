@@ -1,0 +1,41 @@
+model:
+  model_type: MeshGNN2D
+  hidden_dim: 512
+  mpnn_layer_type: GatedGCNConv
+  grid2mesh_num_layers: 3
+  mesh2mesh_num_layers: 9
+  mesh2grid_num_layers: 2
+  node_encoder_type: mlp
+  edge_encoder_type: mlp
+  decoder_type: mlp
+  node_encoder_layers: 2
+  edge_encoder_layers: 3
+  decoder_layers: 3
+  activation: silu
+  dropout: 0
+train:
+  scheduler: ExponentialLR
+  optimizer: Adam
+  loss_fn: SmoothL1Loss
+  lr: 0.001
+  weight_decay: 0.0001
+  batch_size: 5
+  cache_in_memory: false
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  prefetch_factor: 2
+  epochs: 50
+  device: cuda
+  random_seed: 42
+  early_stopping: false
+  early_stopping_patience: 10
+  metrics_every_n_epochs: 1
+wandb:
+  project_name: isca_grl_rebuttal
+  save_data: false
+  append_model_type_to_name: true
+  save_model_threshold: 800
+  sweep:
+    enabled: false
+path_to_processed_data: mesh_gnn_1000_to_3500_splits_4_radius_0_8_candidate_k_16_receiver_local_postprocessed_with_ssw

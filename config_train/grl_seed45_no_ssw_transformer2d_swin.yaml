@@ -1,0 +1,39 @@
+model:
+  model_type: Transformer2DSwinForecaster
+  hidden_dim: 1152
+  patch_height: 2
+  patch_width: 2
+  window_height: 2
+  window_width: 4
+  num_layers: 8
+  num_heads: 8
+  mlp_ratio: 8.0
+  activation: gelu
+  dropout: 0
+  attention_dropout: 0
+train:
+  scheduler: OneCycleLR
+  optimizer: AdamW
+  loss_fn: SmoothL1Loss
+  lr: 0.001
+  weight_decay: 0.0005
+  batch_size: 5
+  cache_in_memory: false
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  prefetch_factor: 2
+  epochs: 50
+  device: cuda
+  random_seed: 45
+  early_stopping: false
+  early_stopping_patience: 10
+  metrics_every_n_epochs: 1
+wandb:
+  project_name: isca_grl_rebuttal
+  save_data: false
+  append_model_type_to_name: true
+  save_model_threshold: 800
+  sweep:
+    enabled: false
+path_to_processed_data: cnn2d_coordinates_trig4_1000_to_3500_postprocessed_no_ssw

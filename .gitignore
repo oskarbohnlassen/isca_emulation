@@ -22,6 +22,12 @@ models/*
 results/*
 !results/.gitkeep
 !results/README.md
+!results/paper/
+results/paper/*
+!results/paper/README.md
+!results/paper/figures/
+results/paper/generated/
+results/paper/check/
 
 wandb/*
 !wandb/.gitkeep
@@ -29,13 +35,8 @@ wandb/*
 
 */baseline_models/
 
-# Notebook-generated assets
-notebooks/plots_for_paper/*
-!notebooks/plots_for_paper/.gitkeep
-!notebooks/plots_for_paper/README.md
-notebooks/data_for_paper/*
-!notebooks/data_for_paper/.gitkeep
-!notebooks/data_for_paper/README.md
+# Exploratory notebooks
+notebooks/
 .ipynb_checkpoints/
 
 # Python build, cache, and test artifacts
@@ -60,3 +61,10 @@ venv/
 
 # Scratch space
 dev/
+
+# Local execution scripts and logs
+bash_scripts/
+
+# Private figure-reproduction metadata
+scripts/manifest.json
+scripts/manifests/

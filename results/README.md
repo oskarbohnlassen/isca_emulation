@@ -1,4 +1,4 @@
 # Results
 
-This directory previously contained local evaluation result folders named after W&B runs and model classes.
-The folders contained files such as `evaluation_results.pt` and model checkpoint `.pt` files. These outputs are not tracked in Git.
+[paper/](paper/README.md) contains the paper and Supporting Information figures.
+Analysis data, tables and generated working files are not tracked.

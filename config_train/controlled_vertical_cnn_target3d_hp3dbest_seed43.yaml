@@ -1,0 +1,36 @@
+# Controlled vertical sensitivity experiment; approved dimensional mappings.
+# HP source: grl_seed42_with_ssw_cnn3d.yaml; sweep rank is not independently verified here.
+model:
+  model_type: SimpleCNN3D
+  hidden_dim: 64
+  kernel_size: 7
+  padding_type: lonlat
+  activation: gelu
+  use_batch_norm: false
+  num_layers: 4
+train:
+  scheduler: ExponentialLR
+  optimizer: AdamW
+  loss_fn: L1Loss
+  lr: 0.0001
+  weight_decay: 0.0001
+  batch_size: 5
+  cache_in_memory: false
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  prefetch_factor: 2
+  epochs: 50
+  device: cuda
+  random_seed: 43
+  early_stopping: false
+  early_stopping_patience: 10
+  metrics_every_n_epochs: 1
+wandb:
+  project_name: isca_grl_rebuttal
+  save_data: false
+  append_model_type_to_name: false
+  save_model_threshold: 800
+  sweep:
+    enabled: false
+path_to_processed_data: cnn3d_coordinates_trig4_1000_to_3500_postprocessed_with_ssw

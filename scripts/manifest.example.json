@@ -1,0 +1,23 @@
+{
+  "selected_checkpoints": {
+    "verified": false,
+    "runs": []
+  },
+  "controlled_checkpoints": {
+    "verified": false,
+    "runs": []
+  },
+  "selected_hyperparameters": {
+    "records": []
+  },
+  "events": {
+    "events": []
+  },
+  "input_hashes": {},
+  "outputs": {
+    "figures": []
+  },
+  "source_provenance": {
+    "functions": {}
+  }
+}

@@ -1,0 +1,40 @@
+model:
+  model_type: SimpleGNN2D
+  gnn_layer_type: GatedGCNResBlock
+  hidden_dim: 500
+  num_layers: 6
+  activation: silu
+  dropout: 0.1
+  node_encoder_type: mlp
+  node_encoder_layers: 3
+  edge_encoder_type: mlp
+  edge_encoder_hidden_dim: 32
+  edge_encoder_layers: 2
+  decoder_type: mlp
+  decoder_layers: 2
+train:
+  scheduler: ExponentialLR
+  optimizer: AdamW
+  loss_fn: L1Loss
+  lr: 0.001
+  weight_decay: 0.0001
+  batch_size: 5
+  cache_in_memory: false
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  prefetch_factor: 2
+  epochs: 50
+  device: cuda
+  random_seed: 43
+  early_stopping: false
+  early_stopping_patience: 10
+  metrics_every_n_epochs: 1
+wandb:
+  project_name: isca_grl_rebuttal
+  save_data: false
+  append_model_type_to_name: true
+  save_model_threshold: 800
+  sweep:
+    enabled: false
+path_to_processed_data: gnn2d_coordinates_trig4_receiver_local_1000_to_3500_receiver_local_postprocessed_with_ssw

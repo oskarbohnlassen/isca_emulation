@@ -1,6 +1,6 @@
 # Isca Emulation Repository
 
-Research code for training and evaluating machine learning emulators of Isca climate model simulations. The repository contains preprocessing pipelines, model definitions, training and evaluation entry points, experiment configuration files, and analysis notebooks used around the paper workflow.
+Research code for training and evaluating machine learning emulators of Isca climate model simulations. The repository contains preprocessing pipelines, model definitions, training and evaluation entry points, experiment configuration files, and scripts reproducing the revised paper and Supporting Information.
 
 ## Repository Layout
 
@@ -9,9 +9,11 @@ Research code for training and evaluating machine learning emulators of Isca cli
 - `config_train/`: Hydra training configurations.
 - `config_inference/`: evaluation configurations.
 - `tests/`: unit tests for data utilities and model components.
-- `notebooks/`: exploratory and paper-analysis notebooks.
+- `scripts/`: paper and Supporting Information figures and tables.
+- `results/paper/`: paper and Supporting Information figures.
 
-Large local files are intentionally not tracked. Raw data, processed data, checkpoints, downloaded artifacts, W&B run state, and result folders are ignored by Git.
+Data, checkpoints, W&B working files and populated analysis manifests are excluded
+from version control.
 
 ## Installation
 
@@ -36,6 +38,15 @@ Runtime configuration is stored in YAML files:
 Training and evaluation use Weights & Biases. Create a local `.env` from `.env.example` and fill in private values locally. Do not commit `.env`.
 
 ## Workflows
+
+The analysis scripts require a populated local manifest and matching evaluated data:
+
+```bash
+python scripts/reproduce.py all
+```
+
+See [scripts/README.md](scripts/README.md) for setup and
+[results/paper/README.md](results/paper/README.md) for the figures.
 
 Preprocess data:
 
